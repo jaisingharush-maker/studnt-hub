@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Book Market | Safe Delete</title>
+    <style>
+        :root { --primary: #2c3e50; --secondary: #27ae60; --bg: #f4f7f6; --white: #ffffff; --danger: #e74c3c; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; padding: 0; }
+        header { background: var(--primary); color: white; padding: 20px; text-align: center; font-size: 1.5rem; font-weight: bold; }
+        .container { max-width: 600px; margin: 20px auto; padding: 10px; }
+        .card { background: var(--white); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .book-item { background: var(--white); padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid var(--secondary); position: relative; }
+        .wa-link { display: block; background: #25D366; color: white; padding: 10px; border-radius: 5px; text-decoration: none; font-weight: bold; text-align: center; margin-top: 10px; }
+        .del-btn { background: none; color: var(--danger); border: 1px solid var(--danger); font-size: 0.8rem; margin-top: 10px; padding: 5px; width: auto; float: right; }
+    </style>
+</head>
+<body>
+
+<header>📚 Student Book Market</header>
+
+<div class="container">
+    <div class="card">
+        <h2>Sell Your Book</h2>
+        <input type="text" id="bookName" placeholder="Book Name (e.g. Physics Class 12)">
+        <input type="number" id="bookPrice" placeholder="Price (₹)">
+        <input type="text" id="contact" placeholder="WhatsApp Number">
+        <input type="password" id="delPin" placeholder="Set a 4-Digit Delete PIN" maxlength="4">
+        <button onclick="uploadBook()">Post Ad Now</button>
+    </div>
+
+    <h2>Available Books</h2>
+    <div id="marketList"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCrFbBhfWT6WlYAH_ZmopTfzrf47GEQe1k",
+        authDomain: "book-swap-104b7.firebaseapp.com",
+        projectId: "book-swap-104b7",
+        storageBucket: "book-swap-104b7.firebasestorage.app",
+        messagingSenderId: "259299080234",
+        appId: "1:259299080234:web:56a031e02a70d39e37eb53"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const bookCol = collection(db, "market_books");
+
+    window.uploadBook = async () => {
+        const name = document.getElementById("bookName").value;
+        const price = document.getElementById("bookPrice").value;
+        const phone = document.getElementById("contact").value;
+        const pin = document.getElementById("delPin").value;
+
+        if(name && price && phone && pin) {
+            await addDoc(bookCol, { title: name, price: price, contact: phone, pin: pin, ts: Date.now() });
+            alert("Book Posted! Remember your PIN to delete it later.");
+            ["bookName", "bookPrice", "contact", "delPin"].forEach(id => document.getElementById(id).value = "");
+        } else { alert("Please fill all details including PIN!"); }
+    };
+
+    onSnapshot(bookCol, (snap) => {
+        const listDiv = document.getElementById("marketList");
+        const sorted = snap.docs.sort((a,b) => b.data().ts - a.data().ts);
+        listDiv.innerHTML = sorted.map(d => {
+            const b = d.data();
+            return `
+                <div class="book-item">
+                    <h3>${b.title}</h3>
+                    <p>Price: ₹${b.price}</p>
+                    <a href="https://wa.me/${b.contact.replace(/\D/g,'')}" class="wa-link" target="_blank">WhatsApp Seller</a>
+                    <button class="del-btn" onclick="askDelete('${d.id}', '${b.pin}')">Remove Ad</button>
+                    <div style="clear:both;"></div>
+                </div>
+            `;
+        }).join('');
+    });
+
+    window.askDelete = async (id, correctPin) => {
+        const userPin = prompt("Enter the 4-digit PIN to delete this ad:");
+        if (userPin === correctPin) {
+            if(confirm("Are you sure you want to delete this?")) {
+                await deleteDoc(doc(db, "market_books", id));
+                alert("Deleted successfully!");
+            }
+        } else if (userPin !== null) {
+            alert("Wrong PIN! You cannot delete this book.");
+        }
+    };
+</script>
+
+</body>
+</html>
