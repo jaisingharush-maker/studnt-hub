@@ -210,6 +210,94 @@
 </script>
 </body>
 </html>
+            <option value="Others">Others</option>
+        </select>
+        <input type="number" id="bookPrice" placeholder="Price (₹)">
+        <input type="text" id="contact" placeholder="WhatsApp Number">
+        <input type="password" id="delPin" placeholder="Set a 4-Digit Delete PIN" maxlength="4">
+        <button onclick="uploadBook()">Post Ad Now</button>
+    </div>
+
+    <h2>Available Books</h2>
+    <div id="marketList"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCrFbBhfWT6WlYAH_ZmopTfzrf47GEQe1k",
+        authDomain: "book-swap-104b7.firebaseapp.com",
+        projectId: "book-swap-104b7",
+        storageBucket: "book-swap-104b7.firebasestorage.app",
+        messagingSenderId: "259299080234",
+        appId: "1:259299080234:web:56a031e02a70d39e37eb53"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const bookCol = collection(db, "market_books");
+
+    window.uploadBook = async () => {
+        const sName = document.getElementById("sellerName").value;
+        const bName = document.getElementById("bookName").value;
+        const cat = document.getElementById("category").value;
+        const price = document.getElementById("bookPrice").value;
+        const phone = document.getElementById("contact").value;
+        const pin = document.getElementById("delPin").value;
+
+        if(sName && bName && price && phone && pin) {
+            try {
+                await addDoc(bookCol, { 
+                    seller: sName, 
+                    title: bName, 
+                    category: cat, 
+                    price: price, 
+                    contact: phone, 
+                    pin: pin, 
+                    ts: Date.now() 
+                });
+                alert("Book Posted Successfully!");
+                ["sellerName", "bookName", "bookPrice", "contact", "delPin"].forEach(id => document.getElementById(id).value = "");
+            } catch (e) { alert("Error posting book. Try again."); }
+        } else { alert("Please fill all details!"); }
+    };
+
+    onSnapshot(bookCol, (snap) => {
+        const listDiv = document.getElementById("marketList");
+        const sorted = snap.docs.sort((a,b) => b.data().ts - a.data().ts);
+        
+        listDiv.innerHTML = sorted.map(d => {
+            const b = d.data();
+            return `
+                <div class="book-item">
+                    <span class="category-tag">${b.category || 'Others'}</span>
+                    <span class="seller-name">👤 Seller: ${b.seller}</span>
+                    <h3>${b.title}</h3>
+                    <p>Price: ₹${b.price}</p>
+                    <a href="https://wa.me/${b.contact.replace(/\D/g,'')}" class="wa-link" target="_blank">Contact ${b.seller} on WhatsApp</a>
+                    <button class="del-btn" onclick="askDelete('${d.id}', '${b.pin}')">Remove My Ad</button>
+                    <div style="clear:both;"></div>
+                </div>
+            `;
+        }).join('');
+    });
+
+    window.askDelete = async (id, correctPin) => {
+        const userPin = prompt("Enter your 4-digit PIN to delete this ad:");
+        if (userPin === correctPin) {
+            if(confirm("Delete this book listing?")) {
+                await deleteDoc(doc(db, "market_books", id));
+                alert("Deleted!");
+            }
+        } else if (userPin !== null) {
+            alert("Incorrect PIN!");
+        }
+    };
+</script>
+</body>
+</html>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
